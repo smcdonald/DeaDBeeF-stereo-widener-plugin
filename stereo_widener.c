@@ -126,11 +126,7 @@ stereo_widener_enabled (void) {
 
 static const char settings_dlg[] =
     "property \"Enable\" checkbox stereo_widener.enable 0;\n"
-
-    // FIXME: This should ideally be a horizontal slider, not text entry.
-    //        plugins/gtkui/pluginconf.c needs to be modified in order to
-    //        support this behaviour.
-    "property \"Effect intensity (negative values permitted, sensible range [-100, 100])\" entry stereo_widener.width 0;\n"
+    "property \"Effect intensity\" hscale[-100,100,1] stereo_widener.width 0;\n"
 ;
 
 static DB_dsp_t plugin = {
