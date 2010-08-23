@@ -57,9 +57,9 @@ stereo_widener_on_configchanged (DB_event_t *ev, uintptr_t data) {
         enabled = e;
     }
 
-    float w = deadbeef->conf_get_float ("stereo_widener.width", 0);
+    float w = tanh(deadbeef->conf_get_float ("stereo_widener.width", 0) / 100);
     if (w != width) {
-        width = tanh(w / 100);
+        width = w;
         recalc_amp ();
     }
     return 0;
