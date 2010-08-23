@@ -1,7 +1,6 @@
 /*
-    Bauer stereophonic-to-binaural plugin for DeaDBeeF
+    Stereo widener plugin for DeaDBeeF
     Copyright (C) 2010 Steven McDonald <steven.mcdonald@libremail.me>
-    Uses libstereo_widener by Boris Mikhaylov <http://stereo_widener.sourceforge.net/>
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License
@@ -24,15 +23,29 @@
 //#define trace(...) { fprintf(stderr, __VA_ARGS__); }
 #define trace(fmt,...)
 
+// Simply transforming samples causes centre-panned
+// instruments to sound quiet and distant. We correct
+// for this by assigning weights to the effect on the
+// mid and side channels.
+#define MIDWEIGHT 0.2
+#define SIDEWEIGHT 1.0
+
 static DB_dsp_t plugin;
 DB_functions_t *deadbeef;
 
 static short enabled = 0;
 static float width = 1;
-static float lsample, rsample, mid, side;
+static float lsample, rsample, mid, side, midamp, sideamp;
 
 static void
 stereo_widener_reset (void);
+
+static void
+recalc_amp () {
+    midamp = 1 - (((width * MIDWEIGHT) + 1) / 2);
+    sideamp = ((width * SIDEWEIGHT) + 1) / 2;
+    return;
+}
 
 static int
 stereo_widener_on_configchanged (DB_event_t *ev, uintptr_t data) {
@@ -44,18 +57,19 @@ stereo_widener_on_configchanged (DB_event_t *ev, uintptr_t data) {
         enabled = e;
     }
 
-    float w = deadbeef->conf_get_float ("stereo_widener.width", 1);
+    float w = deadbeef->conf_get_float ("stereo_widener.width", 0);
     if (w != width) {
-        width = tanh(w / 100) + 1;
+        width = tanh(w / 100);
+        recalc_amp ();
     }
-    
     return 0;
 }
 
 static int
 stereo_widener_plugin_start (void) {
     enabled = deadbeef->conf_get_int ("stereo_widener.enable", 0);
-    width = deadbeef->conf_get_float ("stereo_widener.width", 1);
+    width = tanh(deadbeef->conf_get_float ("stereo_widener.width", 0) / 100);
+    recalc_amp ();
     deadbeef->ev_subscribe (DB_PLUGIN (&plugin), DB_EV_CONFIGCHANGED, DB_CALLBACK (stereo_widener_on_configchanged), 0);
 }
 
@@ -66,14 +80,14 @@ stereo_widener_plugin_stop (void) {
 
 static int
 stereo_widener_process_int16 (int16_t *samples, int nsamples, int nch, int bps, int srate) {
-    if (nch != 2 || width == 1) return nsamples;
+    if (nch != 2 || width == 0) return nsamples;
     for (unsigned i = 0; i < nsamples; i++) {
         lsample = (float)samples[i*2];
         rsample = (float)samples[(i*2) + 1];
         mid = lsample + rsample;
         side = lsample - rsample;
-        samples[i*2] = (int16_t)((1-(width/2)) * mid + (width/2) * side);
-        samples[i*2 + 1] = (int16_t)((1-(width/2)) * mid - (width/2) * side);
+        samples[i*2] = (int16_t)(midamp * mid + sideamp * side);
+        samples[i*2 + 1] = (int16_t)(midamp * mid - sideamp * side);
     }
     return nsamples;
 }
@@ -106,7 +120,7 @@ static const char settings_dlg[] =
     // FIXME: This should ideally be a horizontal slider, not text entry.
     //        plugins/gtkui/pluginconf.c needs to be modified in order to
     //        support this behaviour.
-    "property \"Effect strength (negative values permitted, sensible range [-100, 100])\" entry stereo_widener.width 0;\n"
+    "property \"Effect intensity (negative values permitted, sensible range [-100, 100])\" entry stereo_widener.width 0;\n"
 ;
 
 static DB_dsp_t plugin = {
