@@ -34,7 +34,7 @@ DB_functions_t *deadbeef;
 
 static short enabled = 0;
 static float width = 1;
-static float lsample, rsample, mid, side, midamp, sideamp;
+static float lsample, rsample, mid, side, midamp, sideamp, gain;
 
 static void
 stereo_widener_reset (void);
@@ -43,6 +43,13 @@ static void
 recalc_amp () {
     midamp = 1 - (((width * MIDWEIGHT) + 1) / 2);
     sideamp = ((width * SIDEWEIGHT) + 1) / 2;
+
+    // apply corrective gain
+    gain = midamp > sideamp ? 0.5 / midamp : 0.5 / sideamp;
+    gain = gain > 1 ? 1 : gain;
+    midamp = gain * midamp;
+    sideamp = gain * sideamp;
+
     return;
 }
 
