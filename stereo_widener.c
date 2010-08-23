@@ -18,7 +18,6 @@
 */
 
 #include <deadbeef/deadbeef.h>
-#include <math.h>
 
 //#define trace(...) { fprintf(stderr, __VA_ARGS__); }
 #define trace(fmt,...)
@@ -57,7 +56,9 @@ stereo_widener_on_configchanged (DB_event_t *ev, uintptr_t data) {
         enabled = e;
     }
 
-    float w = tanh(deadbeef->conf_get_float ("stereo_widener.width", 0) / 100);
+    float w = deadbeef->conf_get_float ("stereo_widener.width", 0) / 100;
+    if (w > 1) { w = 1; deadbeef->conf_set_float ("stereo_widener.width", 100); }
+    if (w < -1) { w = -1; deadbeef->conf_set_float ("stereo_widener.width", -100); }
     if (w != width) {
         width = w;
         recalc_amp ();
@@ -68,7 +69,9 @@ stereo_widener_on_configchanged (DB_event_t *ev, uintptr_t data) {
 static int
 stereo_widener_plugin_start (void) {
     enabled = deadbeef->conf_get_int ("stereo_widener.enable", 0);
-    width = tanh(deadbeef->conf_get_float ("stereo_widener.width", 0) / 100);
+    width = deadbeef->conf_get_float ("stereo_widener.width", 0) / 100;
+    if (width > 1) { width = 1; deadbeef->conf_set_float ("stereo_widener.width", 100); }
+    if (width < -1) { width = -1; deadbeef->conf_set_float ("stereo_widener.width", -100); }
     recalc_amp ();
     deadbeef->ev_subscribe (DB_PLUGIN (&plugin), DB_EV_CONFIGCHANGED, DB_CALLBACK (stereo_widener_on_configchanged), 0);
 }
