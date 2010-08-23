@@ -84,10 +84,10 @@ stereo_widener_process_int16 (int16_t *samples, int nsamples, int nch, int bps, 
     for (unsigned i = 0; i < nsamples; i++) {
         lsample = (float)samples[i*2];
         rsample = (float)samples[(i*2) + 1];
-        mid = lsample + rsample;
-        side = lsample - rsample;
-        samples[i*2] = (int16_t)(midamp * mid + sideamp * side);
-        samples[i*2 + 1] = (int16_t)(midamp * mid - sideamp * side);
+        mid = midamp * (lsample + rsample);
+        side = sideamp * (lsample - rsample);
+        samples[i*2] = (int16_t)(mid + side);
+        samples[i*2 + 1] = (int16_t)(mid - side);
     }
     return nsamples;
 }
